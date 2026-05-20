@@ -14,8 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'check.category' => \App\Http\Middleware\CheckCategoryRequest::class,
-            'check.user' => \App\Http\Middleware\CheckUserRequest::class,
-            'check.profile' => \App\Http\Middleware\CheckProfileRequest::class,
+            'check.user'     => \App\Http\Middleware\CheckUserRequest::class,
+            'check.profile'  => \App\Http\Middleware\CheckProfileRequest::class,
+            'check.order'    => \App\Http\Middleware\CheckOrderRequest::class,
+            'role'           => \App\Http\Middleware\RoleMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

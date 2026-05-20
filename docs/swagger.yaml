@@ -1,0 +1,877 @@
+openapi: 3.0.3
+info:
+  title: Marketplace UTP API
+  description: |
+    API Documentation untuk Marketplace UTP.
+    Mencakup modul Users, Profiles, Products, Categories, Tags, dan Orders.
+
+    **Base URL:** `http://127.0.0.1:8000/api`
+  version: 1.0.0
+
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local Development Server
+
+tags:
+  - name: Users
+    description: Manajemen data user
+  - name: Profiles
+    description: Manajemen profil user
+  - name: Products
+    description: Manajemen produk
+  - name: Categories
+    description: Manajemen kategori produk
+  - name: Tags
+    description: Manajemen tag produk
+  - name: Orders
+    description: Manajemen pesanan
+
+paths:
+
+  # ─────────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────────
+  /users:
+    post:
+      tags: [Users]
+      summary: Buat user baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+            example:
+              name: Nuril Arifin
+              email: nuril@example.com
+              password: secret123
+              role: buyer
+      responses:
+        '200':
+          description: User berhasil ditambahkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            $ref: '#/components/schemas/User'
+              example:
+                success: true
+                message: User berhasil ditambahkan
+                data:
+                  data:
+                    id: 1
+                    name: Nuril Arifin
+                    email: nuril@example.com
+                    role: buyer
+                    created_at: "2026-04-01T13:32:00.000000Z"
+                    updated_at: "2026-04-01T13:32:00.000000Z"
+
+    get:
+      tags: [Users]
+      summary: Ambil semua user
+      responses:
+        '200':
+          description: Daftar user berhasil ditampilkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/User'
+              example:
+                success: true
+                message: User berhasil ditampilkan
+                data:
+                  data:
+                    - id: 1
+                      name: Nuril Arifin
+                      email: nuril@example.com
+                      role: buyer
+                      created_at: "2026-04-01T13:32:00.000000Z"
+                      updated_at: "2026-04-01T13:32:00.000000Z"
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Ambil user berdasarkan ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Data user ditemukan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '200 (not found)':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              example:
+                success: false
+                message: user tidak ditemukan
+
+  # ─────────────────────────────────────────
+  # PROFILES
+  # ─────────────────────────────────────────
+  /profiles:
+    post:
+      tags: [Profiles]
+      summary: Buat profil baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+            example:
+              user_id: 1
+              name: Nuril Arifin
+              address: Jl. Contoh No. 1, Jakarta
+              phone: "081234567890"
+      responses:
+        '200':
+          description: Profile berhasil ditambahkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Profile'
+
+    get:
+      tags: [Profiles]
+      summary: Ambil semua profil
+      responses:
+        '200':
+          description: Daftar profil berhasil ditampilkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Profile'
+
+  /profiles/users:
+    get:
+      tags: [Profiles]
+      summary: Ambil semua user beserta profilnya
+      responses:
+        '200':
+          description: Data user dengan profil berhasil diambil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/User'
+                            - type: object
+                              properties:
+                                profiles:
+                                  $ref: '#/components/schemas/Profile'
+              example:
+                success: true
+                message: User berhasil diambil
+                data:
+                  - id: 1
+                    name: Nuril Arifin
+                    email: nuril@example.com
+                    role: buyer
+                    profiles:
+                      id: 1
+                      user_id: 1
+                      name: Nuril Arifin
+                      address: Jl. Contoh No. 1
+                      phone: "081234567890"
+
+  /profiles/{id}:
+    get:
+      tags: [Profiles]
+      summary: Ambil profil berdasarkan ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Data profil ditemukan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Profile'
+
+  # ─────────────────────────────────────────
+  # PRODUCTS
+  # ─────────────────────────────────────────
+  /products:
+    post:
+      tags: [Products]
+      summary: Buat produk baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+            example:
+              user_id: 1
+              name: Laptop Gaming ASUS
+              price: 12500000.00
+              stock: 10
+      responses:
+        '201':
+          description: Product berhasil dibuat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Product'
+              example:
+                success: true
+                message: Product berhasil dibuat.
+                data:
+                  id: 1
+                  user_id: 1
+                  name: Laptop Gaming ASUS
+                  price: "12500000.00"
+                  stock: 10
+                  created_at: "2026-04-01T13:32:00.000000Z"
+                  updated_at: "2026-04-01T13:32:00.000000Z"
+                  user:
+                    id: 1
+                    name: Nuril Arifin
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    get:
+      tags: [Products]
+      summary: Ambil semua produk
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Ambil produk berdasarkan ID (beserta tags)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detail produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Product'
+                      - type: object
+                        properties:
+                          tags:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Tag'
+              example:
+                data:
+                  id: 1
+                  user_id: 1
+                  name: Laptop Gaming ASUS
+                  price: "12500000.00"
+                  stock: 10
+                  tags:
+                    - id: 1
+                      name: elektronik
+                    - id: 2
+                      name: gaming
+        '404':
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: No query results for model [App\Models\Product] 1
+
+  /products/{id}/tag/{tagId}:
+    put:
+      tags: [Products, Tags]
+      summary: Tambahkan tag ke produk
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID produk
+          schema:
+            type: integer
+            example: 1
+        - name: tagId
+          in: path
+          required: true
+          description: ID tag
+          schema:
+            type: integer
+            example: 2
+      responses:
+        '200':
+          description: Tag berhasil ditambahkan ke produk
+          content:
+            application/json:
+              example:
+                message: Tag berhasil ditambahkan ke produk
+                data:
+                  id: 1
+                  name: Laptop Gaming ASUS
+                  tags:
+                    - id: 2
+                      name: gaming
+
+  # ─────────────────────────────────────────
+  # CATEGORIES
+  # ─────────────────────────────────────────
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Ambil semua kategori
+      responses:
+        '200':
+          description: Daftar kategori
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+              example:
+                - id: 1
+                  name: Elektronik
+                  created_at: "2026-04-01T13:32:00.000000Z"
+                  updated_at: "2026-04-01T13:32:00.000000Z"
+
+    post:
+      tags: [Categories]
+      summary: Buat kategori baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: Elektronik
+      responses:
+        '201':
+          description: Kategori berhasil dibuat
+          content:
+            application/json:
+              example:
+                message: Kategori berhasil dibuat
+                data:
+                  id: 1
+                  name: Elektronik
+                  created_at: "2026-04-01T13:32:00.000000Z"
+                  updated_at: "2026-04-01T13:32:00.000000Z"
+
+  /categories/{id}:
+    get:
+      tags: [Categories]
+      summary: Ambil kategori berdasarkan ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Data kategori ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Data tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data tidak ditemukan
+
+  # ─────────────────────────────────────────
+  # TAGS
+  # ─────────────────────────────────────────
+  /tags:
+    post:
+      tags: [Tags]
+      summary: Buat tag baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: elektronik
+      responses:
+        '201':
+          description: Tag berhasil dibuat
+          content:
+            application/json:
+              example:
+                message: Tag berhasil dibuat
+                data:
+                  id: 1
+                  name: elektronik
+                  created_at: "2026-04-01T13:32:00.000000Z"
+                  updated_at: "2026-04-01T13:32:00.000000Z"
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  # ─────────────────────────────────────────
+  # ORDERS
+  # ─────────────────────────────────────────
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Buat order baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+            example:
+              user_id: 1
+              items:
+                - product_id: 1
+                  quantity: 2
+                - product_id: 3
+                  quantity: 1
+      responses:
+        '201':
+          description: Order berhasil dibuat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Order'
+              example:
+                success: true
+                message: Order berhasil dibuat.
+                data:
+                  id: 1
+                  user_id: 1
+                  total_price: "25000000.00"
+                  created_at: "2026-04-01T13:32:00.000000Z"
+                  updated_at: "2026-04-01T13:32:00.000000Z"
+                  user:
+                    id: 1
+                    name: Nuril Arifin
+                  order_items:
+                    - id: 1
+                      order_id: 1
+                      product_id: 1
+                      quantity: 2
+                      price: "12500000.00"
+                      product:
+                        id: 1
+                        name: Laptop Gaming ASUS
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    get:
+      tags: [Orders]
+      summary: Ambil semua order
+      responses:
+        '200':
+          description: Daftar order berhasil diambil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Ambil order berdasarkan ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detail order berhasil diambil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Order'
+        '404':
+          description: Order tidak ditemukan
+          content:
+            application/json:
+              example:
+                success: false
+                message: Order tidak ditemukan.
+
+# ─────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────
+components:
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: ID resource
+      schema:
+        type: integer
+        example: 1
+
+  schemas:
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validasi gagal.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      example:
+        success: false
+        message: Validasi gagal.
+        errors:
+          name:
+            - The name field is required.
+          price:
+            - The price field must be a number.
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Nuril Arifin
+        email:
+          type: string
+          format: email
+          example: nuril@example.com
+        role:
+          type: string
+          example: buyer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          example: Nuril Arifin
+        email:
+          type: string
+          format: email
+          example: nuril@example.com
+        password:
+          type: string
+          format: password
+          example: secret123
+        role:
+          type: string
+          example: buyer
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Nuril Arifin
+        address:
+          type: string
+          example: Jl. Contoh No. 1, Jakarta
+        phone:
+          type: string
+          example: "081234567890"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileRequest:
+      type: object
+      required: [user_id, name, address, phone]
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Nuril Arifin
+        address:
+          type: string
+          example: Jl. Contoh No. 1, Jakarta
+        phone:
+          type: string
+          example: "081234567890"
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Laptop Gaming ASUS
+        price:
+          type: string
+          example: "12500000.00"
+        stock:
+          type: integer
+          example: 10
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    ProductRequest:
+      type: object
+      required: [user_id, name, price, stock]
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          maxLength: 150
+          example: Laptop Gaming ASUS
+        price:
+          type: number
+          minimum: 0
+          example: 12500000.00
+        stock:
+          type: integer
+          minimum: 0
+          example: 10
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Elektronik
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: elektronik
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        total_price:
+          type: string
+          example: "25000000.00"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+        order_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderRequest:
+      type: object
+      required: [user_id, items]
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [product_id, quantity]
+            properties:
+              product_id:
+                type: integer
+                example: 1
+              quantity:
+                type: integer
+                minimum: 1
+                example: 2
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        order_id:
+          type: integer
+          example: 1
+        product_id:
+          type: integer
+          example: 1
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: string
+          example: "12500000.00"
+        product:
+          $ref: '#/components/schemas/Product'

@@ -9,11 +9,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
+        $this->call(UserSeeder::class);
         $this->call(ProductSeeder::class);
         $this->call(OrderSeeder::class);
     }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(find c:\\\\\\\\Users\\\\\\\\acer\\\\\\\\marketplace-utp-laravel -type d -name routes)",
+      "Bash(not exist *)",
+      "Bash(composer require *)"
+    ]
+  }
+}

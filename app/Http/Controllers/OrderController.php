@@ -8,12 +8,55 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use OpenApi\Attributes as OA;
 
 class OrderController extends Controller
 {
-    /**
-     * POST /api/orders: Membuat order baru
-     */
+    #[OA\Post(
+        path: '/api/orders',
+        tags: ['Orders'],
+        summary: 'Buat order baru',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['user_id', 'items'],
+                properties: [
+                    new OA\Property(property: 'user_id', type: 'integer', example: 1),
+                    new OA\Property(
+                        property: 'items',
+                        type: 'array',
+                        items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: 'product_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'quantity', type: 'integer', minimum: 1, example: 2),
+                            ]
+                        )
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Order berhasil dibuat',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Order berhasil dibuat.'),
+                        new OA\Property(property: 'data', type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id', type: 'integer', example: 1),
+                                new OA\Property(property: 'user_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'total_price', type: 'string', example: '25000000.00'),
+                                new OA\Property(property: 'order_items', type: 'array', items: new OA\Items(type: 'object')),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         try {
@@ -29,20 +72,30 @@ class OrderController extends Controller
                 $orderItemsData = [];
 
                 foreach ($validated['items'] as $item) {
-                    $product = Product::findOrFail($item['product_id']);
+                    $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+
+                    if ($product->stock !== null && $product->stock < $item['quantity']) {
+                        throw new \Exception("Stok produk '{$product->name}' tidak mencukupi.");
+                    }
+
                     $itemPrice = $product->price * $item['quantity'];
                     $totalPrice += $itemPrice;
 
                     $orderItemsData[] = [
                         'product_id' => $product->id,
-                        'quantity' => $item['quantity'],
-                        'price' => $product->price,
+                        'quantity'   => $item['quantity'],
+                        'price'      => $product->price,
                     ];
+
+                    if ($product->stock !== null) {
+                        $product->decrement('stock', $item['quantity']);
+                    }
                 }
 
                 $order = Order::create([
-                    'user_id' => $validated['user_id'],
+                    'user_id'     => $validated['user_id'],
                     'total_price' => $totalPrice,
+                    'status'      => 'completed',
                 ]);
 
                 foreach ($orderItemsData as $itemData) {
@@ -62,14 +115,34 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
             ], 422);
         }
     }
 
-    /**
-     * GET /api/orders: Memuat seluruh daftar order
-     */
+    #[OA\Get(
+        path: '/api/orders',
+        tags: ['Orders'],
+        summary: 'Ambil semua order',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Daftar order berhasil diambil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Daftar order berhasil diambil.'),
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                    ]
+                )
+            )
+        ]
+    )]
     public function index(): JsonResponse
     {
         $orders = Order::with(['user', 'orderItems.product'])->latest()->get();
@@ -81,9 +154,36 @@ class OrderController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/orders/{id}: Memuat seluruh daftar order secara spesifik menggunakan order_id
-     */
+    #[OA\Get(
+        path: '/api/orders/{id}',
+        tags: ['Orders'],
+        summary: 'Ambil order berdasarkan ID',
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Detail order berhasil diambil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'data', type: 'object'),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Order tidak ditemukan',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: false),
+                        new OA\Property(property: 'message', type: 'string', example: 'Order tidak ditemukan.'),
+                    ]
+                )
+            ),
+        ]
+    )]
     public function show(int $id): JsonResponse
     {
         $order = Order::with(['user', 'orderItems.product'])->find($id);
