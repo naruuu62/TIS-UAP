@@ -4,7 +4,7 @@ import api from '../api';
 
 export default function Register() {
     const navigate = useNavigate();
-    const [form, setForm]     = useState({ name: '', email: '', password: '', role: 'buyer' });
+    const [form, setForm]     = useState({ name: '', email: '', password: '', password_confirmation: '', role: 'buyer' });
     const [errors, setErrors] = useState({});
     const [error, setError]   = useState('');
     const [loading, setLoading] = useState(false);
@@ -15,9 +15,10 @@ export default function Register() {
         setLoading(true);
         try {
             const res = await api.post('/auth/register', form);
+            const u = res.data.user;
             localStorage.setItem('token', res.data.token);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            navigate('/dashboard');
+            localStorage.setItem('user', JSON.stringify(u));
+            navigate(u.role === 'buyer' ? '/catalog' : '/dashboard');
         } catch (err) {
             if (err.response?.status === 422) setErrors(err.response.data.errors || {});
             else setError(err.response?.data?.message || 'Registrasi gagal.');
@@ -74,6 +75,14 @@ export default function Register() {
                             value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
                             className="input-dark" />
                         {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password[0]}</p>}
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1.5">Konfirmasi Password</label>
+                        <input type="password" required placeholder="Ulangi password"
+                            value={form.password_confirmation}
+                            onChange={e => setForm({ ...form, password_confirmation: e.target.value })}
+                            className="input-dark" />
+                        {errors.password_confirmation && <p className="text-red-400 text-xs mt-1">{errors.password_confirmation[0]}</p>}
                     </div>
 
                     {/* Role selector */}

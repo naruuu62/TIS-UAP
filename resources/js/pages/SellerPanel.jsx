@@ -1,6 +1,146 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 
+function EditModal({ product, availTags, availCategories, onClose, onSaved }) {
+    const [form, setForm] = useState({
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price || '',
+        stock: product.stock ?? '',
+    });
+    const [selectedTags, setSelectedTags] = useState((product.tags ?? []).map(t => t.id));
+    const [selectedCats, setSelectedCats] = useState((product.categories ?? []).map(c => c.id));
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState('');
+
+    const toggleTag = (id) => setSelectedTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+    const toggleCat = (id) => setSelectedCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setSaving(true); setErr('');
+        try {
+            await api.put(`/products/${product.id}`, {
+                name: form.name,
+                description: form.description,
+                price: Number(form.price),
+                stock: Number(form.stock),
+            });
+
+            const prevTagIds = (product.tags ?? []).map(t => t.id);
+            const prevCatIds = (product.categories ?? []).map(c => c.id);
+
+            const tagsToAdd    = selectedTags.filter(id => !prevTagIds.includes(id));
+            const tagsToRemove = prevTagIds.filter(id => !selectedTags.includes(id));
+            const catsToAdd    = selectedCats.filter(id => !prevCatIds.includes(id));
+            const catsToRemove = prevCatIds.filter(id => !selectedCats.includes(id));
+
+            await Promise.all([
+                ...tagsToAdd.map(id    => api.put(`/products/${product.id}/tag/${id}`)),
+                ...tagsToRemove.map(id => api.delete(`/products/${product.id}/tag/${id}`)),
+                ...catsToAdd.map(id    => api.put(`/products/${product.id}/category/${id}`)),
+                ...catsToRemove.map(id => api.delete(`/products/${product.id}/category/${id}`)),
+            ]);
+
+            onSaved();
+        } catch (error) {
+            setErr(error.response?.data?.message || 'Gagal menyimpan perubahan.');
+        } finally { setSaving(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+            <div className="w-full max-w-lg rounded-2xl p-6 space-y-4 overflow-y-auto max-h-[90vh]"
+                style={{ background: '#111', border: '1px solid #2a2a2a' }}>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-white font-bold">Edit Produk</h2>
+                    <button onClick={onClose} className="text-zinc-500 hover:text-white text-xl leading-none">x</button>
+                </div>
+                <form onSubmit={handleSave} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nama Produk *</label>
+                        <input required type="text" value={form.name}
+                            onChange={e => setForm({ ...form, name: e.target.value })} className="input-dark" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Deskripsi</label>
+                        <textarea rows={3} value={form.description}
+                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            className="input-dark resize-none" placeholder="Deskripsi singkat produk..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-1.5">Harga (Rp) *</label>
+                            <input required type="number" min="0" value={form.price}
+                                onChange={e => setForm({ ...form, price: e.target.value })} className="input-dark" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-1.5">Stok *</label>
+                            <input required type="number" min="0" value={form.stock}
+                                onChange={e => setForm({ ...form, stock: e.target.value })} className="input-dark" />
+                        </div>
+                    </div>
+
+                    {availCategories.length > 0 && (
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2">Kategori</label>
+                            <div className="flex flex-wrap gap-2">
+                                {availCategories.map(cat => {
+                                    const active = selectedCats.includes(cat.id);
+                                    return (
+                                        <button key={cat.id} type="button" onClick={() => toggleCat(cat.id)}
+                                            className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                                            style={active
+                                                ? { background:'rgba(99,102,241,0.2)', border:'1px solid rgba(99,102,241,0.5)', color:'#a5b4fc' }
+                                                : { background:'rgba(255,255,255,0.04)', border:'1px solid #333', color:'#555' }}>
+                                            {active ? 'v ' : ''}{cat.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {availTags.length > 0 && (
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 mb-2">Tags</label>
+                            <div className="flex flex-wrap gap-2">
+                                {availTags.map(tag => {
+                                    const active = selectedTags.includes(tag.id);
+                                    return (
+                                        <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
+                                            className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                                            style={active
+                                                ? { background:'rgba(168,85,247,0.2)', border:'1px solid rgba(168,85,247,0.5)', color:'#c084fc' }
+                                                : { background:'rgba(255,255,255,0.04)', border:'1px solid #333', color:'#555' }}>
+                                            {active ? 'v ' : ''}#{tag.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {err && (
+                        <p className="text-sm px-3 py-2 rounded-lg"
+                            style={{ background:'rgba(239,68,68,0.08)', color:'#fca5a5', border:'1px solid rgba(239,68,68,0.2)' }}>
+                            {err}
+                        </p>
+                    )}
+
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="btn-ghost flex-1">Batal</button>
+                        <button type="submit" disabled={saving} className="btn-primary flex-1">
+                            {saving ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function SellerPanel() {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
 
@@ -14,6 +154,7 @@ export default function SellerPanel() {
     const [selectedCats, setSelectedCats] = useState([]);
     const [msg, setMsg]                   = useState({ text: '', ok: true });
     const [saving, setSaving]             = useState(false);
+    const [editProduct, setEditProduct]   = useState(null);
 
     const fetchProducts = () => {
         setLoading(true);
@@ -73,6 +214,7 @@ export default function SellerPanel() {
     const myProducts = products;
 
     return (
+        <>
         <div className="space-y-8">
             {/* Header */}
             <div className="flex items-start justify-between">
@@ -233,7 +375,15 @@ export default function SellerPanel() {
                                         }}>
                                         Stok {p.stock ?? '∞'}
                                     </span>
-                                    <span className="text-xs text-zinc-700 font-mono">#{p.id}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setEditProduct(p)}
+                                            className="text-xs px-2 py-0.5 rounded font-medium transition-colors"
+                                            style={{ background:'rgba(99,102,241,0.1)', color:'#818cf8', border:'1px solid rgba(99,102,241,0.2)' }}>
+                                            Edit
+                                        </button>
+                                        <span className="text-xs text-zinc-700 font-mono">#{p.id}</span>
+                                    </div>
                                 </div>
                                 <h3 className="text-white font-semibold text-sm mb-1 leading-snug">{p.name}</h3>
                                 {p.description && (
@@ -270,5 +420,16 @@ export default function SellerPanel() {
                 )}
             </div>
         </div>
+
+        {editProduct && (
+            <EditModal
+                product={editProduct}
+                availTags={availTags}
+                availCategories={availCategories}
+                onClose={() => setEditProduct(null)}
+                onSaved={() => { setEditProduct(null); fetchProducts(); }}
+            />
+        )}
+        </>
     );
 }

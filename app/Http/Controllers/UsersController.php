@@ -109,15 +109,32 @@ class UsersController extends Controller
     {
         $users = Users::find($id);
         if (!$users) {
-            return response()->json([
-                'success' => false,
-                'message' => 'user tidak ditemukan'
-            ]);
+            return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
         }
+        return response()->json(['success' => true, 'data' => $users]);
+    }
 
-        return response()->json([
-            'success' => true,
-            'data' => $users
-        ]);
+    public function updateUser(Request $request, $id)
+    {
+        $user = Users::find($id);
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+        $data = $request->only(['name', 'email', 'role']);
+        if ($request->filled('password')) {
+            $data['password'] = bcrypt($request->password);
+        }
+        $user->update($data);
+        return response()->json(['success' => true, 'message' => 'User berhasil diperbarui.', 'data' => $user]);
+    }
+
+    public function deleteUser($id)
+    {
+        $user = Users::find($id);
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+        $user->delete();
+        return response()->json(['success' => true, 'message' => 'User berhasil dihapus.']);
     }
 }

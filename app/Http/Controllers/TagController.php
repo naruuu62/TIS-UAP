@@ -27,6 +27,13 @@ class TagController extends Controller
         ]);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $tag = Tag::withCount('products')->find($id);
+        if (!$tag) return response()->json(['success' => false, 'message' => 'Tag tidak ditemukan.'], 404);
+        return response()->json(['success' => true, 'data' => $tag]);
+    }
+
     #[OA\Post(
         path: '/api/tags',
         tags: ['Tags'],

@@ -3,6 +3,7 @@ import api from '../api';
 
 const TABS = [
     { key: 'Users',    label: 'Users' },
+    { key: 'Orders',   label: 'Orders' },
     { key: 'Produk',   label: 'Produk' },
     { key: 'Kategori', label: 'Kategori' },
     { key: 'Tags',     label: 'Tags' },
@@ -15,7 +16,7 @@ const roleStyle = {
 };
 
 /* ── Reusable inline edit row ──────────────────────────────── */
-function EditableRow({ item, onSave, onDelete, placeholder }) {
+function EditableRow({ item, onSave, onDelete, onDetail, placeholder }) {
     const [editing, setEditing] = useState(false);
     const [val, setVal]         = useState(item.name);
     const [saving, setSaving]   = useState(false);
@@ -62,6 +63,13 @@ function EditableRow({ item, onSave, onDelete, placeholder }) {
                     </>
                 ) : (
                     <>
+                        {onDetail && (
+                            <button onClick={() => onDetail(item.id)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                style={{ background:'rgba(255,255,255,0.05)', color:'#888', border:'1px solid #222' }}>
+                                Detail
+                            </button>
+                        )}
                         <button onClick={() => setEditing(true)}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                             style={{ background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)' }}
@@ -215,10 +223,197 @@ function EditProductModal({ product, onClose, onDone }) {
     );
 }
 
+/* ── Generic Item Detail Modal (Category / Tag) ───────────── */
+function ItemDetailModal({ item, type, onClose }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-xs rounded-2xl overflow-hidden" style={{ background:'#111', border:'1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom:'1px solid #1a1a1a' }}>
+                    <p className="text-white font-bold">Detail {type}</p>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-5 space-y-2">
+                    {[
+                        { label:'ID',   value:`#${item.id}` },
+                        { label:'Nama', value: item.name },
+                        { label:'Produk Terkait', value: item.products_count ?? '-' },
+                    ].map(r => (
+                        <div key={r.label} className="flex justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #1a1a1a' }}>
+                            <span className="text-zinc-500 text-xs">{r.label}</span>
+                            <span className="text-white text-xs font-medium">{r.value}</span>
+                        </div>
+                    ))}
+                    <button onClick={onClose} className="btn-ghost w-full mt-2 text-sm">Tutup</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── User Detail Modal ─────────────────────────────────────── */
+function UserDetailModal({ user, onClose }) {
+    const rs = roleStyle[user.role] ?? { bg:'rgba(255,255,255,0.05)', border:'rgba(255,255,255,0.1)', color:'#888' };
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden" style={{ background:'#111', border:'1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom:'1px solid #1a1a1a' }}>
+                    <p className="text-white font-bold">Detail User</p>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-5 space-y-3">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-black"
+                            style={{ background: rs.bg, border:`1px solid ${rs.border}`, color: rs.color }}>
+                            {user.name?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                            <p className="text-white font-semibold">{user.name}</p>
+                            <p className="text-zinc-500 text-xs">{user.email}</p>
+                        </div>
+                    </div>
+                    {[
+                        { label:'ID', value:`#${user.id}` },
+                        { label:'Role', value: user.role },
+                        { label:'Bergabung', value: user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-' },
+                    ].map(r => (
+                        <div key={r.label} className="flex justify-between px-3 py-2 rounded-lg" style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #1a1a1a' }}>
+                            <span className="text-zinc-500 text-xs">{r.label}</span>
+                            <span className="text-white text-xs font-medium capitalize">{r.value}</span>
+                        </div>
+                    ))}
+                    <button onClick={onClose} className="btn-ghost w-full mt-2 text-sm">Tutup</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── Edit User Modal ───────────────────────────────────────── */
+function EditUserModal({ user, onClose, onDone }) {
+    const [form, setForm] = useState({ name: user.name, email: user.email, role: user.role, password: '' });
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState('');
+
+    const handleSave = async (e) => {
+        e.preventDefault(); setSaving(true); setErr('');
+        try {
+            const payload = { name: form.name, email: form.email, role: form.role };
+            if (form.password) payload.password = form.password;
+            await api.put(`/users/${user.id}`, payload);
+            onDone();
+        } catch (e) {
+            setErr(e.response?.data?.message || 'Gagal menyimpan.');
+        } finally { setSaving(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden" style={{ background:'#111', border:'1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom:'1px solid #1a1a1a' }}>
+                    <div>
+                        <p className="text-zinc-500 text-xs mb-0.5">Edit User</p>
+                        <h3 className="text-white font-bold text-sm">{user.name}</h3>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form onSubmit={handleSave} className="p-5 space-y-3">
+                    {[
+                        { key:'name',     label:'Nama',     type:'text' },
+                        { key:'email',    label:'Email',    type:'email' },
+                        { key:'password', label:'Password Baru (opsional)', type:'password', placeholder:'Kosongkan jika tidak diubah' },
+                    ].map(f => (
+                        <div key={f.key}>
+                            <label className="block text-xs text-zinc-500 mb-1">{f.label}</label>
+                            <input type={f.type} value={form[f.key]} placeholder={f.placeholder || ''}
+                                onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                                className="input-dark text-sm" />
+                        </div>
+                    ))}
+                    <div>
+                        <label className="block text-xs text-zinc-500 mb-1">Role</label>
+                        <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
+                            className="input-dark text-sm">
+                            {['buyer','seller','admin'].map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    </div>
+                    {err && <p className="text-xs text-red-400">{err}</p>}
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="btn-ghost flex-1">Batal</button>
+                        <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? 'Menyimpan...' : 'Simpan'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+/* ── Order Detail Modal ────────────────────────────────────── */
+function OrderDetailModal({ order, onClose }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-md rounded-2xl overflow-hidden" style={{ background:'#111', border:'1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom:'1px solid #1a1a1a' }}>
+                    <div>
+                        <p className="text-zinc-500 text-xs mb-0.5">Detail Order</p>
+                        <h3 className="text-white font-bold text-sm">Order #{order.id}</h3>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-5 space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        {[
+                            { label:'Pembeli', value: order.user?.name ?? '-' },
+                            { label:'Status',  value: order.status ?? 'completed' },
+                            { label:'Total',   value: `Rp ${Number(order.total_price).toLocaleString('id-ID')}` },
+                            { label:'Tanggal', value: order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID') : '-' },
+                        ].map(r => (
+                            <div key={r.label} className="px-3 py-2 rounded-lg" style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #1a1a1a' }}>
+                                <p className="text-zinc-500 text-xs mb-0.5">{r.label}</p>
+                                <p className="text-white text-sm font-medium capitalize">{r.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div>
+                        <p className="text-zinc-500 text-xs mb-2">Item Produk</p>
+                        <div className="space-y-2">
+                            {(order.order_items ?? []).map((item, i) => (
+                                <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg"
+                                    style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #1a1a1a' }}>
+                                    <div>
+                                        <p className="text-white text-xs font-medium">{item.product?.name ?? `Produk #${item.product_id}`}</p>
+                                        <p className="text-zinc-600 text-xs">Qty: {item.quantity}</p>
+                                    </div>
+                                    <p className="text-emerald-400 text-xs font-semibold">
+                                        Rp {Number(item.price * item.quantity).toLocaleString('id-ID')}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="btn-ghost w-full text-sm">Tutup</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ── AdminPanel ────────────────────────────────────────────── */
 export default function AdminPanel() {
     const [tab, setTab]               = useState('Users');
     const [users, setUsers]           = useState([]);
+    const [orders, setOrders]         = useState([]);
     const [products, setProducts]     = useState([]);
     const [categories, setCategories] = useState([]);
     const [tags, setTags]             = useState([]);
@@ -226,9 +421,16 @@ export default function AdminPanel() {
     const [msg, setMsg]               = useState({ text: '', ok: true });
     const [saving, setSaving]         = useState(false);
     const [newName, setNewName]       = useState('');
+    // user create form
+    const [showUserForm, setShowUserForm] = useState(false);
+    const [userForm, setUserForm]         = useState({ name:'', email:'', password:'', role:'buyer' });
 
     // modals
-    const [editProduct, setEditProduct]   = useState(null);
+    const [detailUser, setDetailUser]       = useState(null);
+    const [editUser, setEditUser]           = useState(null);
+    const [detailOrder, setDetailOrder]     = useState(null);
+    const [detailItem, setDetailItem]       = useState(null); // { data, type }
+    const [editProduct, setEditProduct]     = useState(null);
     const [attachProduct, setAttachProduct] = useState(null);
 
     useEffect(() => { fetchTab(tab); }, [tab]);
@@ -240,6 +442,9 @@ export default function AdminPanel() {
                 const r = await api.get('/users');
                 const raw = r.data.data;
                 setUsers(Array.isArray(raw) ? raw : (raw?.data ?? []));
+            } else if (t === 'Orders') {
+                const r = await api.get('/orders');
+                setOrders(r.data.data || r.data);
             } else if (t === 'Produk') {
                 const r = await api.get('/products');
                 setProducts(r.data.data || r.data);
@@ -255,6 +460,44 @@ export default function AdminPanel() {
             }
         } catch {}
         setLoading(false);
+    };
+
+    // ── User CRUD ──────────────────────────────────────────
+    const createUser = async (e) => {
+        e.preventDefault(); setSaving(true); setMsg({ text:'', ok:true });
+        try {
+            await api.post('/users', userForm);
+            setMsg({ text:'User berhasil ditambahkan.', ok:true });
+            setUserForm({ name:'', email:'', password:'', role:'buyer' });
+            setShowUserForm(false);
+            fetchTab('Users');
+        } catch (err) {
+            setMsg({ text: err.response?.data?.message || 'Gagal.', ok:false });
+        } finally { setSaving(false); }
+    };
+
+    const deleteUser = async (id) => {
+        if (!confirm('Hapus user ini?')) return;
+        try { await api.delete(`/users/${id}`); fetchTab('Users'); }
+        catch (err) { alert(err.response?.data?.message || 'Gagal hapus.'); }
+    };
+
+    // ── Order ──────────────────────────────────────────────
+    const deleteOrder = async (id) => {
+        if (!confirm('Hapus order ini?')) return;
+        try { await api.delete(`/orders/${id}`); fetchTab('Orders'); }
+        catch (err) { alert(err.response?.data?.message || 'Gagal hapus.'); }
+    };
+
+    // ── Detail helpers ─────────────────────────────────────
+    const showCategoryDetail = async (id) => {
+        try { const r = await api.get(`/categories/${id}`); setDetailItem({ data: r.data.data, type:'Kategori' }); }
+        catch {}
+    };
+
+    const showTagDetail = async (id) => {
+        try { const r = await api.get(`/tags/${id}`); setDetailItem({ data: r.data.data, type:'Tag' }); }
+        catch {}
     };
 
     // ── Category CRUD ──────────────────────────────────────
@@ -328,7 +571,7 @@ export default function AdminPanel() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                     { label: 'Users',    value: users.length,      color: '#a78bfa' },
-                    { label: 'Produk',   value: products.length,   color: '#22d3ee' },
+                    { label: 'Orders',   value: orders.length,     color: '#22d3ee' },
                     { label: 'Kategori', value: categories.length, color: '#fb923c' },
                     { label: 'Tags',     value: tags.length,       color: '#f472b6' },
                 ].map(s => (
@@ -358,34 +601,137 @@ export default function AdminPanel() {
 
                     {/* ── USERS ── */}
                     {tab === 'Users' && (
-                        loading ? <div className="space-y-2">{skeleton}</div>
-                        : users.length === 0 ? <p className="text-zinc-600 text-sm text-center py-10">Belum ada user.</p>
-                        : (
-                            <div className="space-y-2">
-                                {users.map(u => {
-                                    const rs = roleStyle[u.role] ?? { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', color: '#888' };
-                                    return (
-                                        <div key={u.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
-                                            style={{ border: '1px solid #1a1a1a' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-                                                    style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}>
-                                                    {u.name?.[0]?.toUpperCase()}
+                        <>
+                            <div className="flex justify-end">
+                                <button onClick={() => { setShowUserForm(!showUserForm); setMsg({ text:'', ok:true }); }}
+                                    className={showUserForm ? 'btn-ghost text-sm px-4' : 'btn-primary text-sm px-4'}>
+                                    {showUserForm ? 'Batal' : '+ Tambah User'}
+                                </button>
+                            </div>
+                            {showUserForm && (
+                                <form onSubmit={createUser} className="rounded-xl p-4 space-y-3" style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #222' }}>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { key:'name',     label:'Nama',     type:'text',     placeholder:'Nama lengkap' },
+                                            { key:'email',    label:'Email',    type:'email',    placeholder:'email@example.com' },
+                                            { key:'password', label:'Password', type:'password', placeholder:'Min. 6 karakter' },
+                                        ].map(f => (
+                                            <div key={f.key} className={f.key === 'name' ? 'col-span-2' : ''}>
+                                                <label className="block text-xs text-zinc-500 mb-1">{f.label}</label>
+                                                <input required type={f.type} placeholder={f.placeholder} value={userForm[f.key]}
+                                                    onChange={e => setUserForm({ ...userForm, [f.key]: e.target.value })}
+                                                    className="input-dark text-sm" />
+                                            </div>
+                                        ))}
+                                        <div>
+                                            <label className="block text-xs text-zinc-500 mb-1">Role</label>
+                                            <select value={userForm.role} onChange={e => setUserForm({ ...userForm, role: e.target.value })}
+                                                className="input-dark text-sm">
+                                                {['buyer','seller','admin'].map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {msg.text && (
+                                        <p className="text-xs px-3 py-2 rounded-lg"
+                                            style={msg.ok ? { background:'rgba(34,197,94,0.08)', color:'#86efac', border:'1px solid rgba(34,197,94,0.2)' }
+                                                         : { background:'rgba(239,68,68,0.08)', color:'#fca5a5', border:'1px solid rgba(239,68,68,0.2)' }}>
+                                            {msg.text}
+                                        </p>
+                                    )}
+                                    <button type="submit" disabled={saving} className="btn-primary text-sm px-4">
+                                        {saving ? '...' : 'Simpan User'}
+                                    </button>
+                                </form>
+                            )}
+                            {loading ? <div className="space-y-2">{skeleton}</div>
+                            : users.length === 0 ? <p className="text-zinc-600 text-sm text-center py-10">Belum ada user.</p>
+                            : (
+                                <div className="space-y-2">
+                                    {users.map(u => {
+                                        const rs = roleStyle[u.role] ?? { bg:'rgba(255,255,255,0.05)', border:'rgba(255,255,255,0.1)', color:'#888' };
+                                        return (
+                                            <div key={u.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
+                                                style={{ border:'1px solid #1a1a1a' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                                        style={{ background:rs.bg, border:`1px solid ${rs.border}`, color:rs.color }}>
+                                                        {u.name?.[0]?.toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-white text-sm font-medium truncate">{u.name}</p>
+                                                        <p className="text-zinc-600 text-xs truncate">{u.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-white text-sm font-medium">{u.name}</p>
-                                                    <p className="text-zinc-600 text-xs">{u.email}</p>
+                                                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                                    <span className="text-xs px-2 py-0.5 rounded-full border font-medium capitalize"
+                                                        style={{ background:rs.bg, border:`1px solid ${rs.border}`, color:rs.color }}>
+                                                        {u.role}
+                                                    </span>
+                                                    <button onClick={() => setDetailUser(u)}
+                                                        className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                        style={{ background:'rgba(255,255,255,0.05)', color:'#888', border:'1px solid #222' }}>
+                                                        Detail
+                                                    </button>
+                                                    <button onClick={() => setEditUser(u)}
+                                                        className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                        style={{ background:'rgba(99,102,241,0.1)', color:'#a5b4fc', border:'1px solid rgba(99,102,241,0.2)' }}>
+                                                        Edit
+                                                    </button>
+                                                    <button onClick={() => deleteUser(u.id)}
+                                                        className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                        style={{ background:'rgba(239,68,68,0.08)', color:'#fca5a5', border:'1px solid rgba(239,68,68,0.2)' }}>
+                                                        Hapus
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <span className="text-xs px-2 py-0.5 rounded-full border font-medium capitalize"
-                                                style={{ background: rs.bg, border: `1px solid ${rs.border}`, color: rs.color }}>
-                                                {u.role}
-                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* ── ORDERS ── */}
+                    {tab === 'Orders' && (
+                        loading ? <div className="space-y-2">{skeleton}</div>
+                        : orders.length === 0 ? <p className="text-zinc-600 text-sm text-center py-10">Belum ada order.</p>
+                        : (
+                            <div className="space-y-2">
+                                {orders.map(o => (
+                                    <div key={o.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
+                                        style={{ border:'1px solid #1a1a1a' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <span className="text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0"
+                                                style={{ background:'rgba(99,102,241,0.1)', color:'#818cf8' }}>#{o.id}</span>
+                                            <div className="min-w-0">
+                                                <p className="text-white text-sm font-medium truncate">{o.user?.name ?? '-'}</p>
+                                                <p className="text-zinc-600 text-xs">
+                                                    Rp {Number(o.total_price).toLocaleString('id-ID')} · {(o.order_items ?? []).length} item
+                                                </p>
+                                            </div>
                                         </div>
-                                    );
-                                })}
+                                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                            <span className="text-xs px-2 py-0.5 rounded-full border font-medium"
+                                                style={{ background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.25)', color:'#86efac' }}>
+                                                {o.status ?? 'completed'}
+                                            </span>
+                                            <button onClick={() => setDetailOrder(o)}
+                                                className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                style={{ background:'rgba(255,255,255,0.05)', color:'#888', border:'1px solid #222' }}>
+                                                Detail
+                                            </button>
+                                            <button onClick={() => deleteOrder(o.id)}
+                                                className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                style={{ background:'rgba(239,68,68,0.08)', color:'#fca5a5', border:'1px solid rgba(239,68,68,0.2)' }}>
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )
                     )}
@@ -476,6 +822,7 @@ export default function AdminPanel() {
                                     {categories.map(c => (
                                         <EditableRow key={c.id} item={c}
                                             onSave={updateCategory} onDelete={deleteCategory}
+                                            onDetail={showCategoryDetail}
                                             placeholder="Nama kategori" />
                                     ))}
                                 </div>
@@ -509,6 +856,7 @@ export default function AdminPanel() {
                                     {tags.map(t => (
                                         <EditableRow key={t.id} item={t}
                                             onSave={updateTag} onDelete={deleteTag}
+                                            onDetail={showTagDetail}
                                             placeholder="Nama tag" />
                                     ))}
                                 </div>
@@ -520,6 +868,11 @@ export default function AdminPanel() {
             </div>
 
             {/* Modals */}
+            {detailItem  && <ItemDetailModal item={detailItem.data} type={detailItem.type} onClose={() => setDetailItem(null)} />}
+            {detailUser  && <UserDetailModal user={detailUser} onClose={() => setDetailUser(null)} />}
+            {editUser    && <EditUserModal user={editUser} onClose={() => setEditUser(null)}
+                onDone={() => { setEditUser(null); fetchTab('Users'); }} />}
+            {detailOrder && <OrderDetailModal order={detailOrder} onClose={() => setDetailOrder(null)} />}
             {editProduct && (
                 <EditProductModal product={editProduct} onClose={() => setEditProduct(null)}
                     onDone={() => { setEditProduct(null); fetchTab('Produk'); }} />

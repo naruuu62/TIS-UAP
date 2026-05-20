@@ -184,6 +184,17 @@ class OrderController extends Controller
             ),
         ]
     )]
+    public function destroy(int $id): JsonResponse
+    {
+        $order = Order::find($id);
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Order tidak ditemukan.'], 404);
+        }
+        $order->orderItems()->delete();
+        $order->delete();
+        return response()->json(['success' => true, 'message' => 'Order berhasil dihapus.'], 200);
+    }
+
     public function show(int $id): JsonResponse
     {
         $order = Order::with(['user', 'orderItems.product'])->find($id);

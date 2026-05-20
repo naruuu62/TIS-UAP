@@ -38,9 +38,11 @@ Route::middleware('auth:api')->group(function () {
 
     // Users — admin only
     Route::middleware([CheckUserRequest::class, 'role:admin'])->prefix('users')->group(function () {
-        Route::post('/',    [UsersController::class, 'createUsers']);
-        Route::get('/',     [UsersController::class, 'getUsers']);
-        Route::get('/{id}', [UsersController::class, 'getUsersById']);
+        Route::post('/',       [UsersController::class, 'createUsers']);
+        Route::get('/',        [UsersController::class, 'getUsers']);
+        Route::get('/{id}',    [UsersController::class, 'getUsersById']);
+        Route::put('/{id}',    [UsersController::class, 'updateUser']);
+        Route::delete('/{id}', [UsersController::class, 'deleteUser']);
     });
 
     // Profiles — semua role
@@ -49,6 +51,9 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/',      [ProfilesController::class, 'getProfiles']);
         Route::get('/users', [ProfilesController::class, 'getUsersWithProfiles']);
         Route::get('/{id}',  [ProfilesController::class, 'getProfilesById']);
+        Route::put('/{id}',    [ProfilesController::class, 'updateProfile']);
+        Route::patch('/{id}',  [ProfilesController::class, 'updateProfile']);
+        Route::delete('/{id}', [ProfilesController::class, 'destroyProfile']);
     });
 
     // Products — GET semua role, POST seller/admin, PUT/DELETE admin only
@@ -57,20 +62,24 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('role:admin,seller')->group(function () {
         Route::post('/products', [ProductController::class, 'store']);
     });
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,seller')->group(function () {
         Route::put('/products/{id}',    [ProductController::class, 'update']);
+    });
+    Route::middleware('role:admin')->group(function () {
         Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     });
 
-    // Orders — semua role
+    // Orders — semua role bisa list/detail/buat; hanya admin yang bisa hapus
     Route::middleware([CheckOrderRequest::class])->group(function () {
         Route::post('/orders',     [OrderController::class, 'store']);
         Route::get('/orders',      [OrderController::class, 'index']);
         Route::get('/orders/{id}', [OrderController::class, 'show']);
     });
+    Route::middleware('role:admin')->delete('/orders/{id}', [OrderController::class, 'destroy']);
 
     // Tags — GET semua role, POST/PUT/DELETE admin only
-    Route::get('/tags', [TagController::class, 'index']);
+    Route::get('/tags',       [TagController::class, 'index']);
+    Route::get('/tags/{id}',  [TagController::class, 'show']);
     Route::middleware('role:admin')->group(function () {
         Route::post('/tags',        [TagController::class, 'store']);
         Route::put('/tags/{id}',    [TagController::class, 'update']);

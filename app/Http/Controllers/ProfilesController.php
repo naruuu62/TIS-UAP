@@ -43,9 +43,10 @@ class ProfilesController extends Controller
     {
         $profiles = Profiles::create([
             'user_id' => $request->user_id,
-            'name' => $request->name,
+            'name'    => $request->name,
             'address' => $request->address,
-            'phone' => $request->phone,
+            'phone'   => $request->phone,
+            'bio'     => $request->bio,
         ]);
         return response()->json([
             'success' => true,
@@ -106,9 +107,28 @@ class ProfilesController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile berhasil ditampilkan',
-            'data' => [
-                'data' => $profiles
-            ]
+            'data' => $profiles,
+        ]);
+    }
+
+    public function destroyProfile($id)
+    {
+        $profile = Profiles::find($id);
+        if (!$profile) {
+            return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.'], 404);
+        }
+        $profile->delete();
+        return response()->json(['success' => true, 'message' => 'Profil berhasil dihapus.']);
+    }
+
+    public function updateProfile(Request $request, $id)
+    {
+        $profile = Profiles::findOrFail($id);
+        $profile->update($request->only(['phone', 'address', 'bio']));
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diperbarui.',
+            'data' => $profile,
         ]);
     }
 

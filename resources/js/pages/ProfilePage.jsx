@@ -27,13 +27,26 @@ export default function ProfilePage() {
     const handleSave = async (e) => {
         e.preventDefault(); setSaving(true); setMsg({ text: '', ok: true });
         try {
-            if (profile) await api.put(`/profiles/${profile.id}`, form);
-            else         await api.post('/profiles', { ...form, user_id: user?.id });
+            if (profile) await api.patch(`/profiles/${profile.id}`, form);
+            else         await api.post('/profiles', { ...form, user_id: user?.id, name: user?.name });
             setMsg({ text: 'Profil berhasil disimpan.', ok: true });
             setEditing(false);
         } catch (err) {
             setMsg({ text: err.response?.data?.message || 'Gagal menyimpan.', ok: false });
         } finally { setSaving(false); }
+    };
+
+    const handleDelete = async () => {
+        if (!profile) return;
+        if (!confirm('Hapus profil ini? Data tidak dapat dikembalikan.')) return;
+        try {
+            await api.delete(`/profiles/${profile.id}`);
+            setProfile(null);
+            setForm({ phone: '', address: '', bio: '' });
+            setMsg({ text: 'Profil berhasil dihapus.', ok: true });
+        } catch (err) {
+            setMsg({ text: err.response?.data?.message || 'Gagal menghapus.', ok: false });
+        }
     };
 
     const roleMap = {
@@ -85,14 +98,23 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom:'1px solid #1a1a1a' }}>
                     <h3 className="text-white font-semibold">Informasi Profil</h3>
                     {!editing && !loading && (
-                        <button onClick={() => { setEditing(true); setMsg({ text:'', ok:true }); }}
-                            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors px-3 py-1.5 rounded-lg"
-                            style={{ border:'1px solid #222' }}>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => { setEditing(true); setMsg({ text:'', ok:true }); }}
+                                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors px-3 py-1.5 rounded-lg"
+                                style={{ border:'1px solid #222' }}>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit
+                            </button>
+                            {profile && (
+                                <button onClick={handleDelete}
+                                    className="text-xs text-zinc-600 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg"
+                                    style={{ border:'1px solid #222' }}>
+                                    Hapus
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
 
