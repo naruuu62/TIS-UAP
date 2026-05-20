@@ -184,6 +184,27 @@ class OrderController extends Controller
             ),
         ]
     )]
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $order = Order::find($id);
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Order tidak ditemukan.'], 404);
+        }
+        try {
+            $validated = $request->validate([
+                'status' => 'required|in:pending,completed,cancelled',
+            ]);
+            $order->update($validated);
+            return response()->json([
+                'success' => true,
+                'message' => 'Order berhasil diperbarui.',
+                'data'    => $order->load(['user', 'orderItems.product']),
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
+        }
+    }
+
     public function destroy(int $id): JsonResponse
     {
         $order = Order::find($id);

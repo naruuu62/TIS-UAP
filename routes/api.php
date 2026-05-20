@@ -75,6 +75,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/orders',      [OrderController::class, 'index']);
         Route::get('/orders/{id}', [OrderController::class, 'show']);
     });
+    Route::middleware('role:admin')->put('/orders/{id}',    [OrderController::class, 'update']);
     Route::middleware('role:admin')->delete('/orders/{id}', [OrderController::class, 'destroy']);
 
     // Tags — GET semua role, POST/PUT/DELETE admin only

@@ -356,6 +356,81 @@ function EditUserModal({ user, onClose, onDone }) {
     );
 }
 
+/* ── Edit Order Modal ──────────────────────────────────────── */
+function EditOrderModal({ order, onClose, onDone }) {
+    const [status, setStatus] = useState(order.status ?? 'completed');
+    const [saving, setSaving] = useState(false);
+    const [err, setErr]       = useState('');
+
+    const handleSave = async (e) => {
+        e.preventDefault(); setSaving(true); setErr('');
+        try {
+            await api.put(`/orders/${order.id}`, { status });
+            onDone();
+        } catch (e) {
+            setErr(e.response?.data?.message || 'Gagal menyimpan.');
+        } finally { setSaving(false); }
+    };
+
+    const statusOptions = [
+        { value: 'pending',   label: 'Pending',   color: '#fbbf24' },
+        { value: 'completed', label: 'Completed', color: '#86efac' },
+        { value: 'cancelled', label: 'Cancelled', color: '#fca5a5' },
+    ];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden" style={{ background:'#111', border:'1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom:'1px solid #1a1a1a' }}>
+                    <div>
+                        <p className="text-zinc-500 text-xs mb-0.5">Edit Order</p>
+                        <h3 className="text-white font-bold text-sm">Order #{order.id}</h3>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form onSubmit={handleSave} className="p-5 space-y-4">
+                    <div className="px-3 py-2 rounded-lg text-xs" style={{ background:'rgba(255,255,255,0.02)', border:'1px solid #1a1a1a' }}>
+                        <span className="text-zinc-500">Pembeli: </span>
+                        <span className="text-white font-medium">{order.user?.name ?? '-'}</span>
+                        <span className="text-zinc-600 ml-2">· Rp {Number(order.total_price).toLocaleString('id-ID')}</span>
+                    </div>
+                    <div>
+                        <label className="block text-xs text-zinc-500 mb-2">Status Order</label>
+                        <div className="space-y-2">
+                            {statusOptions.map(opt => (
+                                <button key={opt.value} type="button"
+                                    onClick={() => setStatus(opt.value)}
+                                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all"
+                                    style={{
+                                        background: status === opt.value ? `${opt.color}15` : 'rgba(255,255,255,0.02)',
+                                        border: status === opt.value ? `1px solid ${opt.color}50` : '1px solid #1f1f1f',
+                                    }}>
+                                    <span className="text-sm font-medium" style={{ color: status === opt.value ? opt.color : '#555' }}>
+                                        {opt.label}
+                                    </span>
+                                    {status === opt.value && (
+                                        <span className="text-xs" style={{ color: opt.color }}>Dipilih</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    {err && <p className="text-xs text-red-400">{err}</p>}
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="btn-ghost flex-1">Batal</button>
+                        <button type="submit" disabled={saving} className="btn-primary flex-1">
+                            {saving ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 /* ── Order Detail Modal ────────────────────────────────────── */
 function OrderDetailModal({ order, onClose }) {
     return (
@@ -429,6 +504,7 @@ export default function AdminPanel() {
     const [detailUser, setDetailUser]       = useState(null);
     const [editUser, setEditUser]           = useState(null);
     const [detailOrder, setDetailOrder]     = useState(null);
+    const [editOrder, setEditOrder]         = useState(null);
     const [detailItem, setDetailItem]       = useState(null); // { data, type }
     const [editProduct, setEditProduct]     = useState(null);
     const [attachProduct, setAttachProduct] = useState(null);
@@ -724,6 +800,11 @@ export default function AdminPanel() {
                                                 style={{ background:'rgba(255,255,255,0.05)', color:'#888', border:'1px solid #222' }}>
                                                 Detail
                                             </button>
+                                            <button onClick={() => setEditOrder(o)}
+                                                className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                style={{ background:'rgba(99,102,241,0.1)', color:'#a5b4fc', border:'1px solid rgba(99,102,241,0.2)' }}>
+                                                Edit
+                                            </button>
                                             <button onClick={() => deleteOrder(o.id)}
                                                 className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
                                                 style={{ background:'rgba(239,68,68,0.08)', color:'#fca5a5', border:'1px solid rgba(239,68,68,0.2)' }}>
@@ -873,6 +954,8 @@ export default function AdminPanel() {
             {editUser    && <EditUserModal user={editUser} onClose={() => setEditUser(null)}
                 onDone={() => { setEditUser(null); fetchTab('Users'); }} />}
             {detailOrder && <OrderDetailModal order={detailOrder} onClose={() => setDetailOrder(null)} />}
+            {editOrder   && <EditOrderModal order={editOrder} onClose={() => setEditOrder(null)}
+                onDone={() => { setEditOrder(null); fetchTab('Orders'); }} />}
             {editProduct && (
                 <EditProductModal product={editProduct} onClose={() => setEditProduct(null)}
                     onDone={() => { setEditProduct(null); fetchTab('Produk'); }} />
