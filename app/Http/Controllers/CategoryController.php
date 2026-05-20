@@ -122,4 +122,32 @@ class CategoryController extends Controller
         $category->delete();
         return response()->json(['success' => true, 'message' => 'Kategori berhasil dihapus.']);
     }
+
+    public function attachCategory(int $productId, int $categoryId): JsonResponse
+    {
+        $product  = \App\Models\Product::findOrFail($productId);
+        Category::findOrFail($categoryId);
+
+        if (!$product->categories()->where('category_id', $categoryId)->exists()) {
+            $product->categories()->attach($categoryId);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil ditambahkan ke produk.',
+            'data'    => $product->load('categories'),
+        ]);
+    }
+
+    public function detachCategory(int $productId, int $categoryId): JsonResponse
+    {
+        $product = \App\Models\Product::findOrFail($productId);
+        $product->categories()->detach($categoryId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kategori berhasil dilepas dari produk.',
+            'data'    => $product->load('categories'),
+        ]);
+    }
 }

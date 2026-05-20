@@ -4,14 +4,16 @@ import api from '../api';
 export default function SellerPanel() {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
 
-    const [products, setProducts] = useState([]);
-    const [availTags, setAvailTags] = useState([]);
-    const [loading, setLoading]   = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [form, setForm]         = useState({ name: '', description: '', price: '', stock: '' });
+    const [products, setProducts]         = useState([]);
+    const [availTags, setAvailTags]       = useState([]);
+    const [availCategories, setAvailCategories] = useState([]);
+    const [loading, setLoading]           = useState(true);
+    const [showForm, setShowForm]         = useState(false);
+    const [form, setForm]                 = useState({ name: '', description: '', price: '', stock: '' });
     const [selectedTags, setSelectedTags] = useState([]);
-    const [msg, setMsg]           = useState({ text: '', ok: true });
-    const [saving, setSaving]     = useState(false);
+    const [selectedCats, setSelectedCats] = useState([]);
+    const [msg, setMsg]                   = useState({ text: '', ok: true });
+    const [saving, setSaving]             = useState(false);
 
     const fetchProducts = () => {
         setLoading(true);
@@ -24,11 +26,14 @@ export default function SellerPanel() {
     useEffect(() => {
         fetchProducts();
         api.get('/tags').then(r => setAvailTags(r.data.data || r.data)).catch(() => {});
+        api.get('/categories').then(r => setAvailCategories(r.data.data || r.data)).catch(() => {});
     }, []);
 
-    const toggleTag = (id) => {
+    const toggleTag = (id) =>
         setSelectedTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-    };
+
+    const toggleCat = (id) =>
+        setSelectedCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
     const handleCreate = async (e) => {
         e.preventDefault(); setSaving(true); setMsg({ text:'', ok:true });
@@ -42,16 +47,22 @@ export default function SellerPanel() {
             });
             const productId = res.data.data?.id;
 
-            // Attach selected tags
-            if (productId && selectedTags.length > 0) {
-                await Promise.all(selectedTags.map(tagId =>
-                    api.put(`/products/${productId}/tag/${tagId}`)
-                ));
+            // Attach selected tags & categories
+            if (productId) {
+                await Promise.all([
+                    ...selectedTags.map(tagId =>
+                        api.put(`/products/${productId}/tag/${tagId}`)
+                    ),
+                    ...selectedCats.map(catId =>
+                        api.put(`/products/${productId}/category/${catId}`)
+                    ),
+                ]);
             }
 
             setMsg({ text: 'Produk berhasil ditambahkan.', ok: true });
             setForm({ name: '', description: '', price: '', stock: '' });
             setSelectedTags([]);
+            setSelectedCats([]);
             setShowForm(false);
             fetchProducts();
         } catch (err) {
@@ -120,6 +131,31 @@ export default function SellerPanel() {
                             </div>
                         </div>
 
+                        {/* Category selection */}
+                        {availCategories.length > 0 && (
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 mb-2">Kategori (opsional)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {availCategories.map(cat => {
+                                        const active = selectedCats.includes(cat.id);
+                                        return (
+                                            <button key={cat.id} type="button"
+                                                onClick={() => toggleCat(cat.id)}
+                                                className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                                                style={active
+                                                    ? { background:'rgba(99,102,241,0.2)', border:'1px solid rgba(99,102,241,0.5)', color:'#a5b4fc' }
+                                                    : { background:'rgba(255,255,255,0.04)', border:'1px solid #333', color:'#555' }}>
+                                                {active ? '✓ ' : ''}{cat.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {selectedCats.length > 0 && (
+                                    <p className="text-zinc-600 text-xs mt-1.5">{selectedCats.length} kategori dipilih</p>
+                                )}
+                            </div>
+                        )}
+
                         {/* Tag selection */}
                         {availTags.length > 0 && (
                             <div>
@@ -134,7 +170,7 @@ export default function SellerPanel() {
                                                 style={active
                                                     ? { background:'rgba(168,85,247,0.2)', border:'1px solid rgba(168,85,247,0.5)', color:'#c084fc' }
                                                     : { background:'rgba(255,255,255,0.04)', border:'1px solid #333', color:'#555' }}>
-                                                {active && '✓ '}#{tag.name}
+                                                {active ? '✓ ' : ''}#{tag.name}
                                             </button>
                                         );
                                     })}
@@ -202,6 +238,17 @@ export default function SellerPanel() {
                                 <h3 className="text-white font-semibold text-sm mb-1 leading-snug">{p.name}</h3>
                                 {p.description && (
                                     <p className="text-zinc-600 text-xs line-clamp-2 mb-3">{p.description}</p>
+                                )}
+                                {/* Categories */}
+                                {(p.categories ?? []).length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-1">
+                                        {p.categories.map(c => (
+                                            <span key={c.id} className="text-xs px-1.5 py-0.5 rounded"
+                                                style={{ background:'rgba(99,102,241,0.1)', color:'#818cf8', border:'1px solid rgba(99,102,241,0.2)' }}>
+                                                {c.name}
+                                            </span>
+                                        ))}
+                                    </div>
                                 )}
                                 {/* Tags */}
                                 {(p.tags ?? []).length > 0 && (

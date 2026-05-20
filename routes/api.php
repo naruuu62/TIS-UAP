@@ -76,9 +76,11 @@ Route::middleware('auth:api')->group(function () {
         Route::put('/tags/{id}',    [TagController::class, 'update']);
         Route::delete('/tags/{id}', [TagController::class, 'destroy']);
     });
-    // Seller can attach/detach tags on their own products; admin can do it on any product
+    // Seller can attach/detach tags & categories on their own products
     Route::middleware('role:admin,seller')->group(function () {
-        Route::put('/products/{id}/tag/{tagId}',    [TagController::class, 'attachTag']);
-        Route::delete('/products/{id}/tag/{tagId}', [TagController::class, 'detachTag']);
+        Route::put('/products/{id}/tag/{tagId}',              [TagController::class,      'attachTag']);
+        Route::delete('/products/{id}/tag/{tagId}',           [TagController::class,      'detachTag']);
+        Route::put('/products/{id}/category/{categoryId}',    [CategoryController::class, 'attachCategory']);
+        Route::delete('/products/{id}/category/{categoryId}', [CategoryController::class, 'detachCategory']);
     });
 });
