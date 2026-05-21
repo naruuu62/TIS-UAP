@@ -225,7 +225,6 @@ function AttachCategoryModal({ product, categories, onClose, onDone }) {
     );
 }
 
-/* ── Edit Product Modal ────────────────────────────────────── */
 function EditProductModal({ product, onClose, onDone }) {
     const [form, setForm]     = useState({
         name: product.name, description: product.description || '',
