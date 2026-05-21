@@ -42,7 +42,7 @@ export default function Login() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
                     </div>
-                    <span className="text-white font-semibold">Marketplace UTP</span>
+                    <span className="text-white font-semibold">Marketplace</span>
                 </div>
 
                 <div className="relative z-10">
@@ -66,7 +66,7 @@ export default function Login() {
                     </div>
                 </div>
 
-                <p className="text-zinc-700 text-xs relative z-10">© 2025 Marketplace UTP</p>
+                <p className="text-zinc-700 text-xs relative z-10">© 2026 Marketplace</p>
             </div>
 
             {/* Right panel — form */}
@@ -78,7 +78,7 @@ export default function Login() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                             </svg>
                         </div>
-                        <span className="text-white font-semibold text-sm">Marketplace UTP</span>
+                        <span className="text-white font-semibold text-sm">Marketplace</span>
                     </div>
 
                     <h2 className="text-2xl font-bold text-white mb-1">Masuk</h2>

@@ -158,6 +158,73 @@ function AttachTagModal({ product, tags, onClose, onDone }) {
     );
 }
 
+/* ── Attach Category Modal ─────────────────────────────────── */
+function AttachCategoryModal({ product, categories, onClose, onDone }) {
+    const [saving, setSaving] = useState(null);
+    const attached = product.categories?.map(c => c.id) ?? [];
+
+    const toggle = async (catId) => {
+        setSaving(catId);
+        try {
+            if (attached.includes(catId)) {
+                await api.delete(`/products/${product.id}/category/${catId}`);
+            } else {
+                await api.put(`/products/${product.id}/category/${catId}`);
+            }
+            onDone();
+        } catch {}
+        setSaving(null);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden"
+                style={{ background: '#111', border: '1px solid #222' }}>
+                <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <div>
+                        <p className="text-zinc-500 text-xs mb-0.5">Kelola Kategori Produk</p>
+                        <h3 className="text-white font-bold text-sm truncate max-w-xs">{product.name}</h3>
+                    </div>
+                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400 mt-0.5">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="p-5">
+                    {categories.length === 0 ? (
+                        <p className="text-zinc-600 text-sm text-center py-4">Belum ada kategori. Buat kategori dulu di tab Kategori.</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {categories.map(c => {
+                                const isAttached = attached.includes(c.id);
+                                const isLoading  = saving === c.id;
+                                return (
+                                    <button key={c.id} onClick={() => toggle(c.id)} disabled={isLoading}
+                                        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all"
+                                        style={{
+                                            background: isAttached ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.02)',
+                                            border: isAttached ? '1px solid rgba(251,146,60,0.35)' : '1px solid #1f1f1f',
+                                        }}>
+                                        <span className={`text-sm font-medium ${isAttached ? 'text-orange-300' : 'text-zinc-400'}`}>
+                                            {c.name}
+                                        </span>
+                                        <span className="text-xs" style={{ color: isAttached ? '#fb923c' : '#555' }}>
+                                            {isLoading ? '...' : isAttached ? 'Terpasang' : '+ Pasang'}
+                                        </span>
+                                    </button>
+                                );
+            })}
+                        </div>
+                    )}
+                    <button onClick={onClose} className="btn-ghost w-full mt-4 text-sm">Selesai</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ── Edit Product Modal ────────────────────────────────────── */
 function EditProductModal({ product, onClose, onDone }) {
     const [form, setForm]     = useState({
@@ -506,10 +573,21 @@ export default function AdminPanel() {
     const [detailOrder, setDetailOrder]     = useState(null);
     const [editOrder, setEditOrder]         = useState(null);
     const [detailItem, setDetailItem]       = useState(null); // { data, type }
-    const [editProduct, setEditProduct]     = useState(null);
-    const [attachProduct, setAttachProduct] = useState(null);
+    const [editProduct, setEditProduct]             = useState(null);
+    const [attachProduct, setAttachProduct]         = useState(null);
+    const [attachCategoryProduct, setAttachCategoryProduct] = useState(null);
 
     useEffect(() => { fetchTab(tab); }, [tab]);
+
+    // load semua counts untuk stats card
+    useEffect(() => {
+        Promise.all([
+            api.get('/users').then(r => { const raw = r.data.data; setUsers(Array.isArray(raw) ? raw : (raw?.data ?? [])); }).catch(() => {}),
+            api.get('/orders').then(r => setOrders(r.data.data || r.data)).catch(() => {}),
+            api.get('/categories').then(r => setCategories(r.data.data || r.data)).catch(() => {}),
+            api.get('/tags').then(r => setTags(r.data.data || r.data)).catch(() => {}),
+        ]);
+    }, []);
 
     const fetchTab = async (t) => {
         setLoading(true); setMsg({ text: '', ok: true });
@@ -524,9 +602,10 @@ export default function AdminPanel() {
             } else if (t === 'Produk') {
                 const r = await api.get('/products');
                 setProducts(r.data.data || r.data);
-                // also fetch tags for the attach modal
                 const rt = await api.get('/tags');
                 setTags(rt.data.data || rt.data);
+                const rc = await api.get('/categories');
+                setCategories(rc.data.data || rc.data);
             } else if (t === 'Kategori') {
                 const r = await api.get('/categories');
                 setCategories(r.data.data || r.data);
@@ -839,6 +918,18 @@ export default function AdminPanel() {
                                                     <span className="text-zinc-600 text-xs">
                                                         Rp {Number(p.price).toLocaleString('id-ID')} · Stok {p.stock ?? '-'}
                                                     </span>
+                                                    {p.user && (
+                                                        <span className="text-xs px-1.5 py-0.5 rounded"
+                                                            style={{ background: 'rgba(52,211,153,0.08)', color: '#6ee7b7', border: '1px solid rgba(52,211,153,0.2)' }}>
+                                                            {p.user.name}
+                                                        </span>
+                                                    )}
+                                                    {p.categories?.map(c => (
+                                                        <span key={c.id} className="text-xs px-1.5 py-0.5 rounded"
+                                                            style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.2)' }}>
+                                                            {c.name}
+                                                        </span>
+                                                    ))}
                                                     {p.tags?.map(t => (
                                                         <span key={t.id} className="text-xs px-1.5 py-0.5 rounded"
                                                             style={{ background: 'rgba(244,114,182,0.1)', color: '#f9a8d4', border: '1px solid rgba(244,114,182,0.2)' }}>
@@ -849,6 +940,13 @@ export default function AdminPanel() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                            <button onClick={() => setAttachCategoryProduct(p)}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                                style={{ background: 'rgba(251,146,60,0.08)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.2)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(251,146,60,0.15)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(251,146,60,0.08)'}>
+                                                Kategori
+                                            </button>
                                             <button onClick={() => setAttachProduct(p)}
                                                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                                                 style={{ background: 'rgba(244,114,182,0.08)', color: '#f9a8d4', border: '1px solid rgba(244,114,182,0.2)' }}
@@ -968,6 +1066,18 @@ export default function AdminPanel() {
                             setProducts(list);
                             const updated = list.find(p => p.id === attachProduct.id);
                             if (updated) setAttachProduct(updated);
+                        });
+                    }} />
+            )}
+            {attachCategoryProduct && (
+                <AttachCategoryModal product={attachCategoryProduct} categories={categories}
+                    onClose={() => setAttachCategoryProduct(null)}
+                    onDone={() => {
+                        api.get('/products').then(r => {
+                            const list = r.data.data || r.data;
+                            setProducts(list);
+                            const updated = list.find(p => p.id === attachCategoryProduct.id);
+                            if (updated) setAttachCategoryProduct(updated);
                         });
                     }} />
             )}
